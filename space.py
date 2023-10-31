@@ -71,7 +71,7 @@ def draw(canvas, frames_rocket):
     coroutines = [manage_rocket(canvas, frames_rocket, max_y, max_x)] + coroutines
 
     while True:
-        for coroutine in coroutines:
+        for coroutine in coroutines[:]:
             try:
                 coroutine.send(None)
             except StopIteration:
