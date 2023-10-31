@@ -4,6 +4,7 @@ import itertools
 import random
 import time
 
+from functools import partial
 from curses_tools import read_controls, draw_frame, get_frame_size
 
 
@@ -49,7 +50,7 @@ def draw(canvas, frames_rocket):
     curses.use_default_colors()
 
     max_y, max_x = canvas.getmaxyx()
-    rocket_height, rocket_width = get_frame_size(frames_rocket)
+    rocket_height, rocket_width = get_frame_size(next(frames_rocket))
     rocket_row = max_y // 2 - rocket_height // 2
     rocket_column = max_x // 2 - rocket_width // 2
 
@@ -71,7 +72,7 @@ def draw(canvas, frames_rocket):
             except StopIteration:
                 coroutines.remove(coroutine)
 
-        rocket_frame = frames_rocket
+        rocket_frame = next(frames_rocket)
         draw_frame(canvas, rocket_row, rocket_column, rocket_frame)
         canvas.refresh()
         time.sleep(TIC_TIMEOUT)
@@ -84,7 +85,7 @@ def main():
     with open('frames/rocket/frame_2.txt', 'r') as frame_file:
         frame_2 = frame_file.read()
     frames = [frame_1, frame_2]
-    frames_rocket = next(itertools.cycle(frames))
+    frames_rocket = itertools.cycle(frames)
 
     curses.update_lines_cols()
     curses.wrapper(draw, frames_rocket)
