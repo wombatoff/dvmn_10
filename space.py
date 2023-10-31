@@ -44,39 +44,40 @@ def draw_stars(canvas, max_y, max_x):
     return coroutines
 
 
+async def manage_rocket(canvas, frames_rocket, max_y, max_x):
+    rocket_height, rocket_width = get_frame_size(next(frames_rocket))
+    rocket_row = max_y // 2 - rocket_height // 2
+    rocket_column = max_x // 2 - rocket_width // 2
+    while True:
+        rows_direction, columns_direction, _ = read_controls(canvas)
+        new_rocket_row = rocket_row + rows_direction
+        new_rocket_column = rocket_column + columns_direction
+        if (0 <= new_rocket_row <= max_y - rocket_height) and (0 <= new_rocket_column <= max_x - rocket_width):
+            rocket_row = new_rocket_row
+            rocket_column = new_rocket_column
+        rocket_frame = next(frames_rocket)
+        draw_frame(canvas, rocket_row, rocket_column, rocket_frame)
+        await asyncio.sleep(0)
+        draw_frame(canvas, rocket_row, rocket_column, rocket_frame, negative=True)
+
+
 def draw(canvas, frames_rocket):
     curses.curs_set(False)
     canvas.nodelay(1)
     curses.use_default_colors()
 
     max_y, max_x = canvas.getmaxyx()
-    rocket_height, rocket_width = get_frame_size(next(frames_rocket))
-    rocket_row = max_y // 2 - rocket_height // 2
-    rocket_column = max_x // 2 - rocket_width // 2
-
     coroutines = draw_stars(canvas, max_y, max_x)
+    coroutines = [manage_rocket(canvas, frames_rocket, max_y, max_x)] + coroutines
 
     while True:
-        rows_direction, columns_direction, _ = read_controls(canvas)
-
-        new_rocket_row = rocket_row + rows_direction
-        new_rocket_column = rocket_column + columns_direction
-
-        if (0 <= new_rocket_row <= max_y - rocket_height) and (0 <= new_rocket_column <= max_x - rocket_width):
-            rocket_row = new_rocket_row
-            rocket_column = new_rocket_column
-
         for coroutine in coroutines:
             try:
                 coroutine.send(None)
             except StopIteration:
                 coroutines.remove(coroutine)
-
-        rocket_frame = next(frames_rocket)
-        draw_frame(canvas, rocket_row, rocket_column, rocket_frame)
         canvas.refresh()
         time.sleep(TIC_TIMEOUT)
-        draw_frame(canvas, rocket_row, rocket_column, rocket_frame, negative=True)
 
 
 def main():
