@@ -6,15 +6,9 @@ import time
 
 from curses_tools import read_controls, draw_frame, get_frame_size
 
+
 SYMBOLS = '+*.:'
 TIC_TIMEOUT = 0.1
-
-with open('frames/rocket/frame_1.txt', 'r') as frame_file:
-    frame_1 = frame_file.read()
-with open('frames/rocket/frame_2.txt', 'r') as frame_file:
-    frame_2 = frame_file.read()
-frames = [frame_1, frame_2]
-frames_rocket = itertools.cycle(frames)
 
 
 async def blink(canvas, row, column, symbol='*'):
@@ -49,13 +43,13 @@ def draw_stars(canvas, max_y, max_x):
     return coroutines
 
 
-def draw(canvas):
+def draw(canvas, frames_rocket):
     curses.curs_set(False)
     canvas.nodelay(1)
     curses.use_default_colors()
 
     max_y, max_x = canvas.getmaxyx()
-    rocket_height, rocket_width = get_frame_size(frame_1)
+    rocket_height, rocket_width = get_frame_size(frames_rocket)
     rocket_row = max_y // 2 - rocket_height // 2
     rocket_column = max_x // 2 - rocket_width // 2
 
@@ -77,13 +71,24 @@ def draw(canvas):
             except StopIteration:
                 coroutines.remove(coroutine)
 
-        rocket_frame = next(frames_rocket)
+        rocket_frame = frames_rocket
         draw_frame(canvas, rocket_row, rocket_column, rocket_frame)
         canvas.refresh()
         time.sleep(TIC_TIMEOUT)
         draw_frame(canvas, rocket_row, rocket_column, rocket_frame, negative=True)
 
 
-if __name__ == '__main__':
+def main():
+    with open('frames/rocket/frame_1.txt', 'r') as frame_file:
+        frame_1 = frame_file.read()
+    with open('frames/rocket/frame_2.txt', 'r') as frame_file:
+        frame_2 = frame_file.read()
+    frames = [frame_1, frame_2]
+    frames_rocket = next(itertools.cycle(frames))
+
     curses.update_lines_cols()
-    curses.wrapper(draw)
+    curses.wrapper(draw, frames_rocket)
+
+
+if __name__ == '__main__':
+    main()
