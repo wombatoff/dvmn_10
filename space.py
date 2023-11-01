@@ -9,6 +9,7 @@ from curses_tools import read_controls, draw_frame, get_frame_size
 
 SYMBOLS = '+*.:'
 TIC_TIMEOUT = 0.1
+SPEED = 1
 
 
 async def blink(canvas, row, column, offset_tics=20, symbol='*'):
@@ -44,31 +45,39 @@ def draw_stars(canvas, max_y, max_x):
     return coroutines
 
 
-async def manage_rocket(canvas, frames_rocket, max_y, max_x):
+with open('frames/rocket/frame_1.txt', 'r') as frame_file:
+    frame_1 = frame_file.read()
+with open('frames/rocket/frame_2.txt', 'r') as frame_file:
+    frame_2 = frame_file.read()
+frames = [frame_1, frame_1, frame_2, frame_2]
+frames_rocket = itertools.cycle(frames)
+
+
+async def manage_rocket(canvas, max_y, max_x):
     rocket_height, rocket_width = get_frame_size(next(frames_rocket))
     rocket_row = max_y // 2 - rocket_height // 2
     rocket_column = max_x // 2 - rocket_width // 2
     while True:
         rows_direction, columns_direction, _ = read_controls(canvas)
-        new_rocket_row = rocket_row + rows_direction
-        new_rocket_column = rocket_column + columns_direction
-        if (0 <= new_rocket_row <= max_y - rocket_height) and (0 <= new_rocket_column <= max_x - rocket_width):
-            rocket_row = new_rocket_row
-            rocket_column = new_rocket_column
+        new_rocket_row = rocket_row + rows_direction * SPEED
+        new_rocket_column = rocket_column + columns_direction * SPEED
+
+        rocket_row = max(0, min(max_y - rocket_height, new_rocket_row))
+        rocket_column = max(0, min(max_x - rocket_width, new_rocket_column))
         rocket_frame = next(frames_rocket)
         draw_frame(canvas, rocket_row, rocket_column, rocket_frame)
         await asyncio.sleep(0)
         draw_frame(canvas, rocket_row, rocket_column, rocket_frame, negative=True)
 
 
-def draw(canvas, frames_rocket):
+def draw(canvas):
     curses.curs_set(False)
     canvas.nodelay(1)
     curses.use_default_colors()
 
     max_y, max_x = canvas.getmaxyx()
     coroutines = draw_stars(canvas, max_y, max_x)
-    coroutines = [manage_rocket(canvas, frames_rocket, max_y, max_x)] + coroutines
+    coroutines = [manage_rocket(canvas, max_y, max_x)] + coroutines
 
     while True:
         for coroutine in coroutines[:]:
@@ -81,15 +90,8 @@ def draw(canvas, frames_rocket):
 
 
 def main():
-    with open('frames/rocket/frame_1.txt', 'r') as frame_file:
-        frame_1 = frame_file.read()
-    with open('frames/rocket/frame_2.txt', 'r') as frame_file:
-        frame_2 = frame_file.read()
-    frames = [frame_1, frame_2]
-    frames_rocket = itertools.cycle(frames)
-
     curses.update_lines_cols()
-    curses.wrapper(draw, frames_rocket)
+    curses.wrapper(draw)
 
 
 if __name__ == '__main__':
