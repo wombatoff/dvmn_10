@@ -7,9 +7,13 @@ import time
 from curses_tools import read_controls, draw_frame, get_frame_size
 
 
-SYMBOLS = '+*.:'
-TIC_TIMEOUT = 0.1
-SPEED = 1
+class GameSettings:
+    def __init__(self):
+        self.rocket_speed = 1
+        self.rocket_frames = []
+        self.stars = '+*.:'
+        self.tic_timeout = 0.1
+        self.max_stars = 200
 
 
 async def blink(canvas, row, column, offset_tics=20, symbol='*'):
@@ -31,36 +35,29 @@ async def blink(canvas, row, column, offset_tics=20, symbol='*'):
             await asyncio.sleep(0)
 
 
-def draw_stars(canvas, max_y, max_x):
+def draw_stars(canvas, settings, max_y, max_x):
     coroutines = []
 
-    for _ in range(200):
+    for _ in range(settings.max_stars):
         row = random.randint(1, max_y - 2)
         column = random.randint(1, max_x - 2)
         offset_tics = random.randint(20, 30)
-        symbol = random.choice(SYMBOLS)
+        symbol = random.choice(settings.stars)
 
         coroutine = blink(canvas, row, column, offset_tics, symbol)
         coroutines.append(coroutine)
     return coroutines
 
 
-with open('frames/rocket/frame_1.txt', 'r') as frame_file:
-    frame_1 = frame_file.read()
-with open('frames/rocket/frame_2.txt', 'r') as frame_file:
-    frame_2 = frame_file.read()
-frames = [frame_1, frame_1, frame_2, frame_2]
-frames_rocket = itertools.cycle(frames)
-
-
-async def manage_rocket(canvas, max_y, max_x):
+async def manage_rocket(canvas, settings, max_y, max_x):
+    frames_rocket = itertools.cycle(settings.rocket_frames)
     rocket_height, rocket_width = get_frame_size(next(frames_rocket))
     rocket_row = max_y // 2 - rocket_height // 2
     rocket_column = max_x // 2 - rocket_width // 2
     while True:
         rows_direction, columns_direction, _ = read_controls(canvas)
-        new_rocket_row = rocket_row + rows_direction * SPEED
-        new_rocket_column = rocket_column + columns_direction * SPEED
+        new_rocket_row = rocket_row + rows_direction * settings.rocket_speed
+        new_rocket_column = rocket_column + columns_direction * settings.rocket_speed
 
         rocket_row = max(0, min(max_y - rocket_height, new_rocket_row))
         rocket_column = max(0, min(max_x - rocket_width, new_rocket_column))
@@ -71,13 +68,21 @@ async def manage_rocket(canvas, max_y, max_x):
 
 
 def draw(canvas):
+    settings = GameSettings()
+
+    with open('frames/rocket/frame_1.txt', 'r') as frame_file:
+        frame_1 = frame_file.read()
+    with open('frames/rocket/frame_2.txt', 'r') as frame_file:
+        frame_2 = frame_file.read()
+    settings.rocket_frames = [frame_1, frame_1, frame_2, frame_2]
+
     curses.curs_set(False)
     canvas.nodelay(1)
     curses.use_default_colors()
 
     max_y, max_x = canvas.getmaxyx()
-    coroutines = draw_stars(canvas, max_y, max_x)
-    coroutines = [manage_rocket(canvas, max_y, max_x)] + coroutines
+    coroutines = draw_stars(canvas, settings, max_y, max_x)
+    coroutines = [manage_rocket(canvas, settings, max_y, max_x)] + coroutines
 
     while True:
         for coroutine in coroutines[:]:
@@ -86,7 +91,7 @@ def draw(canvas):
             except StopIteration:
                 coroutines.remove(coroutine)
         canvas.refresh()
-        time.sleep(TIC_TIMEOUT)
+        time.sleep(settings.tic_timeout)
 
 
 def main():
